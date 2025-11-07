@@ -6,7 +6,7 @@
 #*    Metodología para el mapa de área de distribución de área de               *
 #*    espacio público cubierta por árboles y arbustos por habitante,            *
 #*    por alcaldía.                                                             *
-#*    Línea XII. Habitable, con equilibrio ecológico y ambiental                *                                                     *
+#*    Línea XII. Habitable, con equilibrio ecológico y ambiental                *                                                    
 #*    Plan General de Desarrollo de la Ciuad de México                          *
 #*                                                                              * 
 #********************************************************************************

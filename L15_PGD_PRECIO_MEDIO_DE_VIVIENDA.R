@@ -4,7 +4,7 @@
 #********************************************************************************             
 #*                                                                              * 
 #*    Metodología para el mapa de precio por m² de vivienda 2018-2024           *
-#*    Línea XV. Proveedora de Vivienda Sostenible y Adecuada                    *                                                     *
+#*    Línea XV. Proveedora de Vivienda Sostenible y Adecuada                    *                                                   
 #*    Plan General de Desarrollo de la Ciuad de México                          *
 #*                                                                              * 
 #********************************************************************************
