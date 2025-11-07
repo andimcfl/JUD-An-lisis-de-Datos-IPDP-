@@ -1,16 +1,33 @@
-#Limpiar la zona de trabajo
+#********************************************************************************
+#    INSTITUTO DE PLANEACIÓN DEMOCRÁTICA Y PROSPECTIVA DE LA CIUDAD DE MÉXICO   *
+#********************************************************************************
+#********************************************************************************             
+#*                                                                              * 
+#*    Metodología para el mapa de área de distribución de área de               *
+#*    espacio público cubierta por árboles y arbustos por habitante,            *
+#*    por alcaldía.                                                             *
+#*    Línea XII. Habitable, con equilibrio ecológico y ambiental                *                                                     *
+#*    Plan General de Desarrollo de la Ciuad de México                          *
+#*                                                                              * 
+#********************************************************************************
+#Limpiar la zona de trabajo----
 rm(list=ls())
-#Librerias
+#Librerias----
 if (require('pacman')) install.packages('pacman')
-pacman::p_load(tidyverse,dplyr,sf,classInt)
+pacman::p_load(tidyverse,dplyr,sf,classInt, googledrive, tmap, paletteer)
 
-##MARCO GEOESTADÍSTICO NACIONAL 2024----
+##Consideraciones
+options(timeout = 100000)
+#Crear directorio----
+dir.create("D:/BASES Y DATOS GENERALES")
+setwd(directorio_base)
+
+##Marco Geoestadistico Nacional 2024----
 url <-"https://www.inegi.org.mx/contenidos/productos/prod_serv/contenidos/espanol/bvinegi/productos/geografia/marcogeo/794551132173/09_ciudaddemexico.zip"
-options(timeout = 1000)
 download.file(url, '09_ciudaddemexico.zip', mode = "wb")
-
 zip::unzip("09_ciudaddemexico.zip", exdir = "09_ciudaddemexico")
 
+####Cargar localidades urbanas####
 loc_ur_mgn_2024 <- st_read("09_ciudaddemexico/conjunto_de_datos/09l.shp")|>
   filter(AMBITO == "Urbana")|>
   st_transform(crs = 32614)|>
@@ -19,13 +36,14 @@ loc_ur_mgn_2024 <- st_read("09_ciudaddemexico/conjunto_de_datos/09l.shp")|>
   summarise(cuenta = n())|>
   select(CVE_MUN)
 
-##DATOS DEL CENSO DE POBLACIÓN Y VIVIENDA (PRINCIPALES RESULTADOS POR LOCALIDAD)----
+##Datos del censo de población y vivienda (principales resultados por localidad)----
 url <- "https://www.inegi.org.mx/contenidos/programas/ccpv/2020/microdatos/iter/iter_09_2020_xlsx.zip"
 options(timeout = 500)
 download.file(url, 'iter_09_2020_xlsx.zip', mode = "wb")
 
 iter_09_2020_xlsx <- unzip('iter_09_2020_xlsx.zip', files = "ITER_09XLSX20.xlsx")
 
+####Cargar datos de población por localidad####
 iter_09_2020_xlsx <- readxl::read_excel("ITER_09XLSX20.xlsx")|>
   mutate(CVEGEO = paste0(ENTIDAD, MUN, LOC),
          CVE_MUN = paste0(ENTIDAD, MUN))|>
@@ -36,50 +54,41 @@ iter_09_2020_xlsx <- readxl::read_excel("ITER_09XLSX20.xlsx")|>
   group_by(CVE_MUN)|>
   summarise(PTOT = sum(POBTOT))
 
+####Asignar la información de población al archivo vectorial de las localidadades####
 loc_ur_mgn_2024<-loc_ur_mgn_2024|>
   left_join(iter_09_2020_xlsx, by = "CVE_MUN")
   
 
-#ARES VERDES POR HABITANTE----
-ruta <- "C:/Users/brenp/Desktop/CARTOGRAFIA PGD/Habitable/acub_arbol_arbus_2024/acacdmxuw.sqlite"
-st_layers(ruta)
+#Área cubierta por arboles y arbustos----
+url <- "http://www.conabio.gob.mx/informacion/gis/maps/ccl/acacdmxgw_c.zip"
+download.file(url, 'acacdmxgw_c.zip', mode = "wb")
+ruta <- unzip('acacdmxgw_c.zip', files = "acacdmxuw.sqlite")
 
 averdesss <- st_read(ruta, layer = "acacdmxuw")|>
   st_transform(32614)|>
-  select(gridcode)|>
-  st_intersection(loc_ur_mgn_2024)
-
-#st_write(averdesss,"C:/Users/brenp/Desktop/CARTOGRAFIA PGD/Habitable/acub_arbol_arbus_2024/acacdmxu_averdesss_corte.gpkg", delete_layer = TRUE)
-
-averdesss_1<-averdesss|>
-  mutate(area = as.numeric(st_area(Shape)))|>
-  group_by(CVE_MUN)|>
-  summarise(area_t = sum(area))|>
-  mutate(CVE_MUN = paste0("09",CVE_MUN))|>
-  st_drop_geometry()|>
-  as.data.frame()
-
-
-loc_ur_mgn_2024<- loc_ur_mgn_2024|>
-  left_join(averdesss_1, by = "CVE_MUN")|>
-  mutate(sphab = area_t/PTOT)
-
-
-#st_write(loc_ur_mgn_2024,"C:/Users/brenp/Desktop/CARTOGRAFIA PGD/Habitable/acub_arbol_arbus_2024/acacdmxu_habitante_loc.gpkg", delete_layer = TRUE)
+  select(gridcode)
 
 
 #Espacios públicos----
-epublicos <- st_read("C:/Users/brenp/Downloads/espacio_publico_2025 (2)/espacio_publico_2025/espacio_publico_2025.shp")|>
-  st_transform(32614)
+jp_file <- as_id("https://drive.google.com/file/d/1wm8hIsMkGrKwjNZ7d7V-TEEFWCWuel4A/view?usp=drive_link")
+drive_download(jp_file, overwrite = TRUE)
+zip::unzip('espacio_publico_2025.zip',  exdir = "espacio_publico_2025")
 
+epublicos <- st_read("espacio_publico_2025/espacio_publico_2025/espacio_publico_2025.shp")|>
+  st_transform(32614)|>
+  mutate(tipo = "Espacio público")
+
+#Cortar las áreas verdes a los espacios públicos----
 averdesss <- st_read(ruta, layer = "acacdmxuw")|>
   st_transform(32614)|>
   select(gridcode)|>
   st_intersection(epublicos)
 
-st_write(averdesss,"C:/Users/brenp/Desktop/CARTOGRAFIA PGD/Habitable/acub_arbol_arbus_2024/acacdmxu_averdesss_corte_epub.gpkg", delete_layer = TRUE)
+####Exportar si se quiere la superficie de espacio público cubierta por árboles y arbustos####
+#st_write(averdesss,"acacdmxu_averdesss_corte_epub.gpkg", delete_layer = TRUE)
 
-
+#Obtener el área de espacio cubierta por árboles y arbustos por habitante agrupado por alcaldia----
+##Obtener el área de espacio cubierta por árboles y arbusto por alcaldía----
 averdesss_1<-averdesss|>
   select(esp_pub)|>
   st_intersection(loc_ur_mgn_2024)|>
@@ -89,9 +98,31 @@ averdesss_1<-averdesss|>
   st_drop_geometry()|>
   as.data.frame()
 
+##Área de espacio cubierta por árboles y arbustos por habitante agrupado por alcaldia----
 loc_ur_mgn_2024<- loc_ur_mgn_2024|>
   left_join(averdesss_1, by = "CVE_MUN")|>
   mutate(sphab = area_t/PTOT)
 
-st_write(loc_ur_mgn_2024,"C:/Users/brenp/Desktop/CARTOGRAFIA PGD/Habitable/acub_arbol_arbus_2024/acacdmxu_epub_habitante_loc.gpkg", delete_layer = TRUE)
+#Exportar los datos de Área de espacio cubierta por árboles y arbustos por habitante agrupado por alcaldia----
+#st_write(loc_ur_mgn_2024,"acacdmxu_epub_habitante_loc.gpkg", delete_layer = TRUE)
+
+
+##MAPEAR----
+tmap_mode("view")
+
+tm_basemap("OpenStreetMap") +   
+  tm_shape(loc_ur_mgn_2024) +
+  tm_polygons("sphab",
+              style = "jenks",
+              n = 4,
+              palette = paletteer_c("ggthemes::Classic Area Green", 4),
+              alpha = 0.7,
+              title = "m² de vegetación por habitante") +
+  tm_layout(legend.position = c("left", "bottom"))+
+  tm_shape(epublicos) +
+  tm_borders(col = "grey60", lwd = 1)
+
+
+
+
 
