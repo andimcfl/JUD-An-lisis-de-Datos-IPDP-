@@ -14,10 +14,11 @@ rm(list = ls())
 if(!require ('pacman')) install.packages('pacman')
 pacman::p_load(tidyverse, dplyr, sf, readr, googledrive, tmap, paletteer)
 
-##Consideraciones----
+##Consideraciones
 options(timeout = 100000)
-#Crear directorio
-dir.create("D:/BASES Y DATOS GENERALES")
+#Crear directorio----
+dir.create("BASE")
+directorio_base <- "BASE"
 setwd(directorio_base)
 
 #Cargar la información sobre los avalúos de la SHF----
